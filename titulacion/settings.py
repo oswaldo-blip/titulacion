@@ -3,20 +3,34 @@ Django settings for Sistema de Gestión de Titulación - ITA (SIGET)
 """
 
 import os
+import dj_database_url
 from pathlib import Path
 
 from titulacion.db_config import build_django_database
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get(
+SECRET_KEY = os.environ.get('SECRET_KEY', default='your secret key')
+
+""" os.environ.get(
     'DJANGO_SECRET_KEY',
     'django-insecure-v-!#9q7$-wuprtdv))c9rg(-fh2%kv(h%j2l)(3ezq#=293a!',
-)
+)"""
 
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('1', 'true', 'yes')
+DEBUG = 'RENDER' not in os.environ
 
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
+"""os.environ.get('DJANGO_DEBUG', 'True').lower() in ('1', 'true', 'yes')
+"""
+
+ALLOWED_HOSTS = []
+
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
+"""os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')"""
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -37,6 +51,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -72,7 +87,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'titulacion.wsgi.application'
 
-DATABASES = build_django_database()
+DATABASES = {
+    'default': dj_database_url.config(
+        default='sqlite:///db.sqlite3',
+        conn_max_age=600
+    )
+}
+
+"""build_django_database"""
 
 AUTH_USER_MODEL = 'administracion.Usuario'
 
@@ -94,6 +116,10 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+
+if not DEBUG:
+    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
